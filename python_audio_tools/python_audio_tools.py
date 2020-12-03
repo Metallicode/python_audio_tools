@@ -92,17 +92,21 @@ class AudioTools:
     def MakeSignal(self, shape="sin", frequency=440, length=1.0):
         
         signal = None
-        t = self._timevector(length)
-
+        t = self._timevector(length)  
+        x = t * np.pi * 2 * frequency
+        
         #shape selector
         if shape == "sin":
-            signal = np.sin(2 * np.pi * frequency * t)        
+            signal = np.sin(x)        
         elif shape == "triangle":
-            signal = sgl.sawtooth(2 * np.pi * frequency * t, 0.5)       
+            #signal = sgl.sawtooth(2 * np.pi * frequency * t, 0.5)
+            signal = np.abs((x/np.pi-0.5)%2-1)*2-1
         elif shape == "saw":
-            signal = sgl.sawtooth(2 * np.pi * frequency * t)     
+            #signal = sgl.sawtooth(2 * np.pi * frequency * t)  
+            signal = -((x/np.pi)%2)+1   
         elif shape == "square":
-            signal = (np.mod(frequency*t , 1) < 0.5)*2.0-1    
+            #signal = (np.mod(frequency*t , 1) < 0.5)*2.0-1 
+            signal = np.where(x/np.pi % 2 > 1, -1,1)    
         elif shape == "random_noise":
             signal = 1.0*np.random.random(int(length*self.sample_rate))
         elif shape == "normal_noise":
@@ -211,24 +215,32 @@ class AudioTools:
 #Testing
 if __name__ == "__main__":
     at = AudioTools()
-    x=at.OpenFile("f")
+
+
+
+
+
+
+
+
+    # x=at.OpenFile("f")
     
 
 
     
 ##    x = at.WavtableFromSample(x)
 
-    x=at.Echo(x,130, 5, mix=0.5,cutoff =7000)
+    # x=at.Echo(x,130, 5, mix=0.5,cutoff =7000)
     
-    x = at.Chorus(x, mod_frequency=0.05,depth=200)
+    # x = at.Chorus(x, mod_frequency=0.05,depth=200)
     
 ####Test Signal generators
     
 ##    x = at.MakeSignal()
 ##    x = at.MakeSignal( shape="sin", frequency=4, length=2.0) 
 ##    x = at.MakeSignal( shape="triangle", frequency=4, length=2.0)
-##    x = at.MakeSignal( shape="saw", frequency=4, length=2.0)
-##    x = at.MakeSignal( shape="square", frequency=4, length=2.0)
+##   x = at.MakeSignal( shape="saw", frequency=4, length=2.0)
+    x = at.MakeSignal( shape="square", frequency=4, length=2.0)
 ##    x = at.MakeSignal( shape="random_noise", frequency=4, length=2.0)
 ##    x = at.MakeSignal( shape="normal_noise", frequency=4, length=2.0)
 
@@ -260,7 +272,7 @@ if __name__ == "__main__":
 
 ##    at.PlotFrequencyDomain(x, zoom=10)
     at.PlotTimeDomain(x)
-    at.MakeFile(x)
+    # at.MakeFile(x)
 
 
 
