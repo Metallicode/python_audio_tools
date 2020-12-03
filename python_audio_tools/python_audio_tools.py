@@ -192,8 +192,11 @@ class AudioTools:
         return self._norm(np.array(signal,dtype=np.float64))
 
 
-
-
+    def KikGenerator(self, length=1, max_pitch=1000, min_pitch=50, envelop=50):
+        t = self._timevector(length)
+        kik = (max_pitch-min_pitch) * (t**envelop) + min_pitch
+        kik = np.cumsum(kik)
+        return np.sin(kik * np.pi / self.sample_rate)[::-1]
 
 
 
@@ -216,8 +219,7 @@ class AudioTools:
 if __name__ == "__main__":
     at = AudioTools()
 
-
-
+    x = at.KikGenerator()
 
 
 
@@ -239,8 +241,8 @@ if __name__ == "__main__":
 ##    x = at.MakeSignal()
 ##    x = at.MakeSignal( shape="sin", frequency=4, length=2.0) 
 ##    x = at.MakeSignal( shape="triangle", frequency=4, length=2.0)
-##   x = at.MakeSignal( shape="saw", frequency=4, length=2.0)
-    x = at.MakeSignal( shape="square", frequency=4, length=2.0)
+ ##  x = at.MakeSignal( shape="saw", frequency=4, length=2.0)
+##    x = at.MakeSignal( shape="square", frequency=4, length=2.0)
 ##    x = at.MakeSignal( shape="random_noise", frequency=4, length=2.0)
 ##    x = at.MakeSignal( shape="normal_noise", frequency=4, length=2.0)
 
@@ -272,7 +274,7 @@ if __name__ == "__main__":
 
 ##    at.PlotFrequencyDomain(x, zoom=10)
     at.PlotTimeDomain(x)
-    # at.MakeFile(x)
+    at.MakeFile(x)
 
 
 
