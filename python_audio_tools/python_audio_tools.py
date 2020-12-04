@@ -41,7 +41,6 @@ class AudioTools:
     
         return sgl.filtfilt(a,b,signal)
 
-
     def Overdrive(self,signal, drive=5):     
         return self._norm([1-np.exp(-x*drive) if x > 0 else -1+np.exp(x*drive) for x in signal]) 
 
@@ -146,18 +145,13 @@ class AudioTools:
 
         return self._norm(product)
 
-
     def WavtableFromSample(self, signal,length = 5.0, min_peak_heigth = 100):
-        FFT, freqs = self.FFT(signal)
-        
+        FFT, freqs = self.FFT(signal)      
         indices = sgl.find_peaks(FFT[range(len(FFT)//20)], height=min_peak_heigth, width=2)[0]
         peaks = [freqs[x] for x in indices]
         wave_table = [np.roll(self.MakeSignal("sin", i , length), int(i%180)) for i in peaks]
         
         return self.MixSignals(*wave_table)
-
-
-
 
     def FFT(self,signal):
         FFT = abs(scipy.fft.fft(signal))
@@ -191,18 +185,24 @@ class AudioTools:
         samplerate, signal = wavfile.read(f"{name}.wav")
         return self._norm(np.array(signal,dtype=np.float64))
 
-
-    def KikGenerator(self, length=1, max_pitch=1000, min_pitch=50, envelop=50):
+    def KikGenerator(self, length=1.0, max_pitch=1000, min_pitch=50, log=50):
         t = self._timevector(length)
         kik = (max_pitch-min_pitch) * (t**envelop) + min_pitch
         kik = np.cumsum(kik)
         return np.sin(kik * np.pi / self.sample_rate)[::-1]
 
+    def SnerGenerator(self, length=1.0, high_pitch=800, low_pitch=250, log=50, mix=0.5):
+        noise = self.MakeSignal(shape="normal_noise", length=length)
+        t = self._timevector(length)
 
+        t01 = self.MakeSignal(shape="sin", frequency=high_pitch, length=length)
+        t02 = self.MakeSignal(shape="sin", frequency=low_pitch, length=length)
 
+        sner_tone = (noise*(1.0-mix))+((t01+t02)*mix)
+        env = 0.5 ** (log*t)
+        sner_drum =sner_tone*env
 
-
-
+        return self._norm(sner_drum)
 
 
 
@@ -219,7 +219,7 @@ class AudioTools:
 if __name__ == "__main__":
     at = AudioTools()
 
-    x = at.KikGenerator()
+    x = at.SnerGenerator(mix=0.9)
 
 
 
