@@ -206,7 +206,6 @@ class AudioTools:
         return self._norm(sner_drum)
 
 
-#TODO...
     def CymbelGenerator(self, length=1.0, op_a_freq=4000,op_b_freq=400, noise_env=40, tone_env=10,cutoff=3000, mix=0.5):
 
         t = self._timevector(length)
@@ -233,10 +232,12 @@ class AudioTools:
 if __name__ == "__main__":
     at = AudioTools()
 
-    x = at.KikGenerator(length=0.3)
-    #x = at.Clip(x)
-
-
+    #x = at.KikGenerator(length=0.6, max_pitch=1000, min_pitch=40, log=10)
+    #x = at.Clip(x, thd=0.3)
+    #x = at.SnerGenerator(length=1.0, high_pitch=500, low_pitch=50, log=30, mix=0.5)
+    #x = at.Clip(x, thd=0.3)
+    x = at.CymbelGenerator( length=1.0, op_a_freq=4234,op_b_freq=300, noise_env=10, tone_env=30,cutoff=2700, mix=0.5)
+    x = at.Clip(x, thd=0.3)
 
 
 
