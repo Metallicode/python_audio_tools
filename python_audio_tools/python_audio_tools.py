@@ -107,9 +107,9 @@ class AudioTools:
             #signal = (np.mod(frequency*t , 1) < 0.5)*2.0-1 
             signal = np.where(x/np.pi % 2 > 1, -1,1)    
         elif shape == "random_noise":
-            signal = 1.0*np.random.random(int(length*self.sample_rate))
+            signal = np.random.random(int(length*self.sample_rate))*2.0-1.0
         elif shape == "normal_noise":
-            signal = 1.0*np.random.randn(int(length*self.sample_rate))       
+            signal = self._norm(np.random.randn(int(length*self.sample_rate)))     
         else:
             pass
         return signal
@@ -187,9 +187,10 @@ class AudioTools:
 
     def KikGenerator(self, length=1.0, max_pitch=1000, min_pitch=50, log=50):
         t = self._timevector(length)
-        kik = (max_pitch-min_pitch) * (t**envelop) + min_pitch
+        t= t + (1.0-max(t))
+        kik = (max_pitch-min_pitch) * (t**log) + min_pitch
         kik = np.cumsum(kik)
-        return np.sin(kik * np.pi / self.sample_rate)[::-1]
+        return np.sin(kik * np.pi / (length*self.sample_rate))[::-1]
 
     def SnerGenerator(self, length=1.0, high_pitch=800, low_pitch=250, log=50, mix=0.5):
         noise = self.MakeSignal(shape="normal_noise", length=length)
@@ -205,9 +206,22 @@ class AudioTools:
         return self._norm(sner_drum)
 
 
+#TODO...
+    def CymbelGenerator(self, length=1.0, op_a_freq=4000,op_b_freq=400, noise_env=40, tone_env=10,cutoff=3000, mix=0.5):
 
+        t = self._timevector(length)
+        n_env = 0.5 ** (noise_env*t)
+        t_env = 0.5 ** (tone_env*t)
 
+        noise = self.MakeSignal(shape="random_noise", length=length)*n_env
+        
 
+        modulator_sin  = np.sin(op_a_freq*np.pi*2*t)
+        fm_tone = np.sin(modulator_sin * op_b_freq)[::-1]*t_env
+
+        cymbel = (noise*(1.0-mix))+(fm_tone*mix)
+        cymbel = self.Filter(cymbel, flt_type="high", cutoff=cutoff)
+        return self._norm(cymbel)
 
 
 
@@ -219,7 +233,8 @@ class AudioTools:
 if __name__ == "__main__":
     at = AudioTools()
 
-    x = at.SnerGenerator(mix=0.9)
+    x = at.KikGenerator(length=0.3)
+    #x = at.Clip(x)
 
 
 
@@ -243,8 +258,8 @@ if __name__ == "__main__":
 ##    x = at.MakeSignal( shape="triangle", frequency=4, length=2.0)
  ##  x = at.MakeSignal( shape="saw", frequency=4, length=2.0)
 ##    x = at.MakeSignal( shape="square", frequency=4, length=2.0)
-##    x = at.MakeSignal( shape="random_noise", frequency=4, length=2.0)
-##    x = at.MakeSignal( shape="normal_noise", frequency=4, length=2.0)
+ ##   x = at.MakeSignal( shape="random_noise", length=2.0)
+  #  x = at.MakeSignal( shape="normal_noise", length=2.0)
 
 ####test FastFm
 ##    x = at.FastFM(m_frequency=2, c_frequency=440, length=10.0)
