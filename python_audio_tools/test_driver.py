@@ -3,7 +3,10 @@ from python_audio_tools import AudioTools
 #Testing
 if __name__ == "__main__":
     at = AudioTools()
-    x = at.MakeSignal( shape="saw", frequency=40, length=1.0)
+    x = at.MakeSignal( shape="saw", frequency=617, length=1.0)
+    # x = at.ModulationEnvelop(steps=20, low_value=300, high_value=1800)
+    # x = at.ModulationEnvelop(steps=20, low_value=300, high_value=1800, mod_type="logarithmic", args={'log':1.0})
+
     x = at.FilterSweep(x,hi_freq=2000)
 
 
@@ -64,5 +67,5 @@ if __name__ == "__main__":
 ##    
 
 ##    at.PlotFrequencyDomain(x, zoom=10)
-  #  at.PlotTimeDomain(x)
+    # at.PlotTimeDomain(x)
     at.MakeFile(x)

@@ -243,11 +243,10 @@ class AudioTools:
         return 0.5 ** (power*t)
 
 
-    def FilterSweep(self, signal, hi_freq, low_freq=10, order = 5, step=1000, upsweep=False):
+    def FilterSweep(self, signal, hi_freq, low_freq=10, order = 5, step=1000, upsweep=False, mod_type="logarithmic"):
         p = self._split_signal(signal, step, step*2)
         
-        env = np.linspace(low_freq,hi_freq, len(p))
-        
+        env = self.ModulationEnvelop(steps=len(p), low_value=low_freq, high_value=hi_freq, mod_type=mod_type)[::-1]
         x = []
         
         for i in range(0, len(p)-1):
@@ -257,3 +256,25 @@ class AudioTools:
         x = self._heal(x, step)
         return np.array(x)
 
+    def _rescale_to_range(self, new_min, new_max, data):
+        min_val = min(data)
+        max_val = max(data)
+        return [(new_min + ((i-min_val)*(new_max-new_min) / (max_val-min_val))) for i in data]
+
+
+    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5}):
+        
+        env=None
+        
+        if mod_type=="logarithmic":
+            env = self._rescale_to_range( new_min=low_value, new_max=high_value, data=self.GetLogEnvelop(np.arange(0,steps),power=args['log'])[::-1])      
+        elif mod_type=="sigmoid_a":
+            pass
+        elif mod_type=="sigmoid_b":
+            pass
+        elif mod_type=="sigmoid_c":
+            pass
+        else:
+            env = np.linspace(low_value,high_value,steps)
+
+        return env[::-1] if direcion=="down" else env
