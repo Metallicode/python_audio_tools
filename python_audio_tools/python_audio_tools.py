@@ -23,6 +23,22 @@ class AudioTools:
     def _timevector(self, length):       
         return np.arange(0,length,1.0/self.sample_rate)
 
+    def _split_signal(self, signal, step, size):
+        return  [signal[i : i + size] for i in range(0, len(signal), step)]
+
+    def _heal(self, chunks, x_len):
+        x = chunks[0]
+        for i in range(0,len(chunks)-1):
+            x= self._merge(x, chunks[i+1], x_len)    
+        return x
+
+    def _merge(self,a,b, overlap):  
+        return list(a[:-overlap]) + self._cross_fade(a[len(a)-overlap:], b[:overlap]) + list(b[overlap:] )
+
+    def _cross_fade(self,a,b):
+        lin = np.arange(0,1.0, 1/len(a))
+        return [((a[i]*lin[::-1][i]) + (b[i]*lin[i])) for i in range(len(a))]
+
     #mix args signals
     def MixSignals(self, *signals):
         mixed = np.zeros(len(signals[0]))    
@@ -200,7 +216,7 @@ class AudioTools:
         t02 = self.MakeSignal(shape="sin", frequency=low_pitch, length=length)
 
         sner_tone = (noise*(1.0-mix))+((t01+t02)*mix)
-        env = 0.5 ** (log*t)
+        env = self.GetLogEnvelop(t, log)
         sner_drum =sner_tone*env
 
         return self._norm(sner_drum)
@@ -209,8 +225,8 @@ class AudioTools:
     def CymbelGenerator(self, length=1.0, op_a_freq=4000,op_b_freq=400, noise_env=40, tone_env=10,cutoff=3000, mix=0.5):
 
         t = self._timevector(length)
-        n_env = 0.5 ** (noise_env*t)
-        t_env = 0.5 ** (tone_env*t)
+        n_env = self.GetLogEnvelop(t, noise_env)
+        t_env = self.GetLogEnvelop(t, tone_env)
 
         noise = self.MakeSignal(shape="random_noise", length=length)*n_env
         
@@ -223,74 +239,21 @@ class AudioTools:
         return self._norm(cymbel)
 
 
+    def GetLogEnvelop(self, t, power=2):
+        return 0.5 ** (power*t)
 
 
-
-
-
-#Testing
-if __name__ == "__main__":
-    at = AudioTools()
-
-    #x = at.KikGenerator(length=0.6, max_pitch=1000, min_pitch=40, log=10)
-    #x = at.Clip(x, thd=0.3)
-    #x = at.SnerGenerator(length=1.0, high_pitch=500, low_pitch=50, log=30, mix=0.5)
-    #x = at.Clip(x, thd=0.3)
-    x = at.CymbelGenerator( length=1.0, op_a_freq=4234,op_b_freq=300, noise_env=10, tone_env=30,cutoff=2700, mix=0.5)
-    x = at.Clip(x, thd=0.3)
-
-
-
-    # x=at.OpenFile("f")
-    
-
-
-    
-##    x = at.WavtableFromSample(x)
-
-    # x=at.Echo(x,130, 5, mix=0.5,cutoff =7000)
-    
-    # x = at.Chorus(x, mod_frequency=0.05,depth=200)
-    
-####Test Signal generators
-    
-##    x = at.MakeSignal()
-##    x = at.MakeSignal( shape="sin", frequency=4, length=2.0) 
-##    x = at.MakeSignal( shape="triangle", frequency=4, length=2.0)
- ##  x = at.MakeSignal( shape="saw", frequency=4, length=2.0)
-##    x = at.MakeSignal( shape="square", frequency=4, length=2.0)
- ##   x = at.MakeSignal( shape="random_noise", length=2.0)
-  #  x = at.MakeSignal( shape="normal_noise", length=2.0)
-
-####test FastFm
-##    x = at.FastFM(m_frequency=2, c_frequency=440, length=10.0)
-
-####test FM
-##    x = at.MakeSignal( shape="saw", frequency=50, length=2.0)
-##    x = at.FM(x,c_frequency=100,depth=2000.0 )
-
-
-####test AM
-##    x = at.MakeSignal( shape="triangle", frequency=60, length=10.0)
-##    y = at.MakeSignal( shape="sin", frequency=200, length=10.0)
-##    x = at.AM(x,y)
-
-####test mix
-##    x = at.MakeSignal( shape="sin", frequency=550, length=2.0) 
-##    y = at.MakeSignal( shape="triangle", frequency=170, length=2.0)
-##    z = at.MakeSignal( shape="saw", frequency=90, length=2.0)
-##    x = at.MixSignals(x,y,z)
-
-  
-##    x=at.Quantization(x, 0.05)
-##
-##    
-##
-##    
-
-##    at.PlotFrequencyDomain(x, zoom=10)
-    at.PlotTimeDomain(x)
-    at.MakeFile(x)
-
-
+    def FilterSweep(self, signal, hi_freq, low_freq=10, order = 5, step=1000, upsweep=False):
+        p = self._split_signal(signal, step, step*2)
+        
+        env = np.linspace(low_freq,hi_freq, len(p))
+        
+        x = []
+        
+        for i in range(0, len(p)-1):
+            cutoff = env[i] if upsweep else env[::-1][i]
+            x.append(self.Filter(p[i],cutoff=cutoff))
+            
+        x = self._heal(x, step)
+        return np.array(x)
 
