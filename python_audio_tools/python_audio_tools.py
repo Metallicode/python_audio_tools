@@ -261,15 +261,23 @@ class AudioTools:
         max_val = max(data)
         return [(new_min + ((i-min_val)*(new_max-new_min) / (max_val-min_val))) for i in data]
 
+    def _sigmoid_a(self, length, a=1, b=1):
+        '''
+        length = length of the array
+        a = curve x position (a>0 & a<100~)
+        b = linear phase gradient (b>0) 0.1 is linear, 1< is hard gradient
+        '''
+        t = np.arange(-length/2,length/2) 
+        return 1 / (a + np.exp(-t*b))
 
-    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5}):
+    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5, 'a':1.0, 'b':1.0}):
         
         env=None
         
         if mod_type=="logarithmic":
             env = self._rescale_to_range( new_min=low_value, new_max=high_value, data=self.GetLogEnvelop(np.arange(0,steps),power=args['log'])[::-1])      
         elif mod_type=="sigmoid_a":
-            pass
+            env =  self._rescale_to_range( new_min=low_value, new_max=high_value, data=self._sigmoid_a(steps,a=args["a"], b=args["b"]))
         elif mod_type=="sigmoid_b":
             pass
         elif mod_type=="sigmoid_c":
