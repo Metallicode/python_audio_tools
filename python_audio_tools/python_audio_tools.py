@@ -19,6 +19,13 @@ class AudioTools:
         data = np.array([((x-min_v) / (max_v-min_v)) for x in data])*2.0-1
         return data * ((max_v/min_v)*-1)
 
+    def _simple_norm(self, data):
+        min_v = min(data)
+        max_v = max(data)
+        return np.array([((x-min_v) / (max_v-min_v)) for x in data])
+
+
+
     #will return a Time Vector with a given length and sample size of 1.0/sample_rate
     def _timevector(self, length):       
         return np.arange(0,length,1.0/self.sample_rate)
@@ -221,7 +228,6 @@ class AudioTools:
 
         return self._norm(sner_drum)
 
-
     def CymbelGenerator(self, length=1.0, op_a_freq=4000,op_b_freq=400, noise_env=40, tone_env=10,cutoff=3000, mix=0.5):
 
         t = self._timevector(length)
@@ -230,7 +236,6 @@ class AudioTools:
 
         noise = self.MakeSignal(shape="random_noise", length=length)*n_env
         
-
         modulator_sin  = np.sin(op_a_freq*np.pi*2*t)
         fm_tone = np.sin(modulator_sin * op_b_freq)[::-1]*t_env
 
@@ -238,10 +243,8 @@ class AudioTools:
         cymbel = self.Filter(cymbel, flt_type="high", cutoff=cutoff)
         return self._norm(cymbel)
 
-
     def GetLogEnvelop(self, t, power=2):
         return 0.5 ** (power*t)
-
 
     def FilterSweep(self, signal, hi_freq, low_freq=10, order = 5, step=1000, upsweep=False, mod_type="logarithmic"):
         p = self._split_signal(signal, step, step*2)
@@ -261,7 +264,7 @@ class AudioTools:
         max_val = max(data)
         return [(new_min + ((i-min_val)*(new_max-new_min) / (max_val-min_val))) for i in data]
 
-    def _sigmoid_a(self, length, a=1, b=1):
+    def _sigmoid_a(self, length, a, b):
         '''
         length = length of the array
         a = curve x position (a>0 & a<100~)
@@ -270,7 +273,50 @@ class AudioTools:
         t = np.arange(-length/2,length/2) 
         return 1 / (a + np.exp(-t*b))
 
-    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5, 'a':1.0, 'b':1.0}):
+
+    def _sigmoid_b(self, length, lin_length, direction):
+        #create -1 to 1 vector t
+        T = np.arange(-1.0,1.0,1.0/self.sample_rate)
+        #create mid linear function (sustain)
+        tq = np.arange(1,lin_length,1.0/self.sample_rate)
+        
+        x = np.zeros_like(T)
+
+        #create sigmoid and normalize.. SAD!
+        for i in range(len(T)):
+            x[i] = T[i]/((T[i]**2)+1)
+
+        x = self._simple_norm(x)    
+
+        #concatenate functions
+        if direction=='up':
+            new_t = np.concatenate([x[:(len(x)//2)],tq-0.5])
+        elif direction=='down':
+            new_t = np.concatenate([tq-0.5,x[(len(x)//2):]+lin_length-1])
+        elif direction=='bi':
+            new_t = np.concatenate([x[:(len(x)//2)],tq-0.5,x[(len(x)//2):]+lin_length-1])
+
+        #normalize again and compress x to 1 (time shift)
+        x = self._simple_norm([new_t[i] for i in range(len(new_t)) if i%(len(new_t)/self.sample_rate)==0])
+
+        #rescale time to length
+        out = []
+        for i in x:
+            for j in range(length):
+                out.append(i)
+
+        #fix aliasing...  SAD!  :(
+        for i in range(2):
+            out = sgl.savgol_filter(out, 71, 3)
+        
+        return out
+
+    
+    def _sigmoid_c(self, length):
+        pass
+
+
+    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5, 'a':1.0, 'b':1.0, 'lin_length':10.0, 'direction':"bi"}):
         
         env=None
         
@@ -279,7 +325,7 @@ class AudioTools:
         elif mod_type=="sigmoid_a":
             env =  self._rescale_to_range( new_min=low_value, new_max=high_value, data=self._sigmoid_a(steps,a=args["a"], b=args["b"]))
         elif mod_type=="sigmoid_b":
-            pass
+            env =  self._rescale_to_range( new_min=low_value, new_max=high_value, data=self._sigmoid_b(steps,lin_length=args["lin_length"], direction=args["direction"]))
         elif mod_type=="sigmoid_c":
             pass
         else:
