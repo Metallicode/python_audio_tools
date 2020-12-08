@@ -273,7 +273,6 @@ class AudioTools:
         t = np.arange(-length/2,length/2) 
         return 1 / (a + np.exp(-t*b))
 
-
     def _sigmoid_b(self, length, lin_length, direction):
         #create -1 to 1 vector t
         T = np.arange(-1.0,1.0,1.0/self.sample_rate)
@@ -311,12 +310,56 @@ class AudioTools:
         
         return out
 
+    #x is the value at z & zb intercept(1:5~). a_shape=(-5:-0.1)->first curve, b_shape=(1,10)
+    def _sigmoid_c(self, length, intercept, a_shape, b_shape):
+
+        #create X vector and allocate axis.
+        t = self._timevector(length)
+        z = np.zeros_like(t)
+        zb = np.zeros_like(t)
+        zc = np.zeros_like(t)
+
+  
+
+        #Create first exponential function 
+        Tangent_index = 0
+        done = False
+
+        for i in range(len(t)):
+            z[i] = b_shape*t[i]**2
+
+            if t[i] >= intercept and done is False:
+                Tangent_index = i
+                done=True
+
     
-    def _sigmoid_c(self, length):
-        pass
+        #calculate function derivative ( the sensitivity to change of the function value (output value) with respect to a change in its argument (input value))
+        #gradient and tangent point
+        derivative = b_shape*2
+        gradient = derivative*intercept
+        tangent = (intercept, b_shape*intercept**2)
+
+        #create linear function based on gradient and tan
+        for i in range(len(t)):
+            zb[i] = gradient*t[i] + (tangent[1] - (gradient*tangent[0]))
+
+        last = -1000000
+
+        #create logarithmic function with same gradiant as zb at (0,0)
+        for i in range(len(t)):
+            zc[i] =  (a_shape*t[i]**2) + (gradient*t[i]) + (tangent[1] - (gradient*tangent[0]))
+            if zc[i] > last:
+                last = zc[i]
+            else:
+                zc[i]=last
+
+        #concatenate functions to one vector
+        delta = max(zb) + max(z[:Tangent_index])
+        f = self._simple_norm(np.concatenate([z[:Tangent_index], zb[Tangent_index:], zc+delta]))
+        return f
 
 
-    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5, 'a':1.0, 'b':1.0, 'lin_length':10.0, 'direction':"bi"}):
+    def ModulationEnvelop(self, steps, low_value, high_value, mod_type="linear", direcion="down", args={'log':0.5, 'a':1.0, 'b':1.0, 'lin_length':10.0, 'direction':"bi", 'intercept':3, 'a_shape':-10, 'b_shape':2 }):
         
         env=None
         
@@ -327,7 +370,7 @@ class AudioTools:
         elif mod_type=="sigmoid_b":
             env =  self._rescale_to_range( new_min=low_value, new_max=high_value, data=self._sigmoid_b(steps,lin_length=args["lin_length"], direction=args["direction"]))
         elif mod_type=="sigmoid_c":
-            pass
+            env = self._rescale_to_range( new_min=low_value, new_max=high_value, data=self._sigmoid_c(steps,intercept=args["intercept"], a_shape=args["a_shape"], b_shape=args["b_shape"]))
         else:
             env = np.linspace(low_value,high_value,steps)
 

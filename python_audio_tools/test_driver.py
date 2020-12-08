@@ -6,10 +6,11 @@ if __name__ == "__main__":
     # x = at.MakeSignal( shape="saw", frequency=70, length=1.0)
     # x = at.ModulationEnvelop(steps=20, low_value=300, high_value=1800)
     # x = at.ModulationEnvelop(steps=10, low_value=300, high_value=1800, mod_type="sigmoid_a", args={'a':1.0, 'b':0.5})
-    x = at.ModulationEnvelop(steps=10, low_value=300, high_value=1800, mod_type="sigmoid_b", args={'lin_length':2.0, 'direction':"bi"})
+    # x = at.ModulationEnvelop(steps=10, low_value=300, high_value=1800, mod_type="sigmoid_b", args={'lin_length':2.0, 'direction':"bi"})
+    x = at.ModulationEnvelop(steps=10, low_value=300, high_value=1800, mod_type="sigmoid_c", args={'intercept':6, 'a_shape':-5, 'b_shape':10})
     # x = at.ModulationEnvelop(steps=10, low_value=300, high_value=1800, mod_type="logarithmic", args={'log':1.0})
 
-    x = at.FilterSweep(x,hi_freq=2000, mod_type="sigmoid_a")
+    # x = at.FilterSweep(x,hi_freq=2000, mod_type="sigmoid_a")
 
 
 
